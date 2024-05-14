@@ -7,8 +7,6 @@ import 'providers/key_style.dart';
 import 'windows/error/error.dart';
 import 'windows/settings/settings.dart';
 import 'windows/key_visualizer/key_visualizer.dart';
-import 'windows/mouse_visualizer/mouse_visualizer.dart';
-
 class KeyvizApp extends StatelessWidget {
   const KeyvizApp({super.key});
 
@@ -34,7 +32,6 @@ class KeyvizApp extends StatelessWidget {
                 ErrorView(),
                 KeyVisualizer(),
                 SettingsWindow(),
-                MouseVisualizer(),
               ],
             ),
           ),

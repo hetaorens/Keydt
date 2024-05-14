@@ -62,15 +62,6 @@ enum HorizontalAlignment {
   final String iconName;
 }
 
-// mouse animation type
-enum MouseClickAnimation {
-  static,
-  focus,
-  filled;
-
-  @override
-  String toString() => name.capitalize();
-}
 
 // style provider of the keycap visualization
 class KeyStyleProvider extends ChangeNotifier {
@@ -180,12 +171,7 @@ class KeyStyleProvider extends ChangeNotifier {
   // margin from the edge of the screen in px/pixels
   double _margin = 128;
 
-  // ----- Mouse -----
-  // mouse click animation type
-  MouseClickAnimation _clickAnimation = MouseClickAnimation.focus;
-
-  // mouse click border color
-  Color _clickColor = Colors.grey[100]!;
+ 
 
   KeyCapStyle get keyCapStyle => _keyCapStyle;
 
@@ -281,9 +267,9 @@ class KeyStyleProvider extends ChangeNotifier {
   Alignment get alignment => _alignment;
   double get margin => _margin;
 
-  MouseClickAnimation get clickAnimation => _clickAnimation;
+ 
   double get cursorHighlightSize => _fontSize * 4;
-  Color get clickColor => _clickColor;
+ 
 
   // key cap properties
   Size get minContainerSize {
@@ -456,7 +442,6 @@ class KeyStyleProvider extends ChangeNotifier {
         _primaryColor1 = Colors.white;
         _primaryColor2 = const Color(0xfff2f2f2);
         _borderColor = const Color(0xffcccccc);
-
         _mPrimaryColor1 = const Color(0xff76BCEF);
         _mPrimaryColor2 = const Color(0xff1A8FE3);
         _mBorderColor = const Color(0xff1882CE);
@@ -669,15 +654,9 @@ class KeyStyleProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  set clickAnimation(MouseClickAnimation value) {
-    _clickAnimation = value;
-    notifyListeners();
-  }
 
-  set clickColor(Color value) {
-    _clickColor = value;
-    notifyListeners();
-  }
+ 
+ 
 
   set alignment(Alignment value) {
     _alignment = value;
@@ -719,8 +698,7 @@ class KeyStyleProvider extends ChangeNotifier {
         _JsonKeys.backgroundOpacity: _backgroundOpacity,
         _JsonKeys.alignment: _alignment.toString(),
         _JsonKeys.margin: _margin,
-        _JsonKeys.clickAnimation: _clickAnimation.name,
-        _JsonKeys.clickColor: _clickColor.toHex(),
+ 
       };
 
   _updateFromJson() async {
@@ -901,21 +879,9 @@ class KeyStyleProvider extends ChangeNotifier {
 
     _margin = data[_JsonKeys.margin] ?? _Defaults.margin;
 
-    switch (data[_JsonKeys.clickAnimation]) {
-      case "static":
-        _clickAnimation = MouseClickAnimation.static;
-        break;
+ 
 
-      case "focus":
-        _clickAnimation = MouseClickAnimation.focus;
-        break;
-
-      case "filled":
-        _clickAnimation = MouseClickAnimation.filled;
-        break;
-    }
-
-    _clickColor = HexColor.fromHex(data[_JsonKeys.clickColor] ?? "e6e6e6");
+ 
 
     notifyListeners();
   }
@@ -950,8 +916,7 @@ class KeyStyleProvider extends ChangeNotifier {
     _backgroundOpacity = _Defaults.backgroundOpacity;
     _alignment = _Defaults.alignment;
     _margin = _Defaults.margin;
-    _clickAnimation = _Defaults.clickAnimation;
-    _clickColor = _Defaults.clickColor;
+ 
 
     notifyListeners();
   }
@@ -987,8 +952,7 @@ class _JsonKeys {
   static const backgroundOpacity = "background_opacity";
   static const alignment = "alignment";
   static const margin = "margin";
-  static const clickAnimation = "click_animation";
-  static const clickColor = "click_color";
+
 }
 
 class _Defaults {
@@ -1021,6 +985,5 @@ class _Defaults {
   static const backgroundOpacity = 1.0;
   static const alignment = Alignment.bottomRight;
   static const margin = 80.0;
-  static const clickAnimation = MouseClickAnimation.focus;
-  static const clickColor = Color(0xffe6e6e6);
+ 
 }

@@ -10,7 +10,6 @@ import 'package:tray_manager/tray_manager.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'package:keyviz/config/config.dart';
-import 'package:keyviz/domain/services/raw_keyboard_mouse.dart';
 import 'package:keyviz/domain/vault/vault.dart';
 
 import 'key_event_data.dart';
@@ -70,9 +69,6 @@ enum KeyCapAnimationType {
   String toString() => name.capitalize();
 }
 
-extension on MouseEvent {
-  Offset get offset => Offset(x, y);
-}
 
 /// keyboard event provider and related configurations
 class KeyEventProvider extends ChangeNotifier with TrayListener {
@@ -87,8 +83,6 @@ class KeyEventProvider extends ChangeNotifier with TrayListener {
   final List<Screen> _screens = [];
 
   // an offset to adapt origin from topLeft
-  // to bottomRight on macOS for mouse events
-  Offset _macOSMouseOriginOffset = Offset.zero;
 
   // errors
   bool _hasError = false;
@@ -98,22 +92,9 @@ class KeyEventProvider extends ChangeNotifier with TrayListener {
   bool _styling = false;
 
   // keyboard event listener id
-  int? _mouseListenerId;
 
-  // cursor position
-  Offset _cursorOffset = Offset.zero;
 
-  // first cursor down offset
-  Offset? _firstCursorOffset;
-
-  // cursor button down state
-  bool _mouseButtonDown = false;
-
-  // track gap between mouse down and up
-  int? _mouseButtonDownTimestamp;
-
-  // mouse left button down and mouse moving
-  bool _dragging = false;
+ 
 
   // keyboard event listener id
   int? _keyboardListenerId;
@@ -173,14 +154,6 @@ class KeyEventProvider extends ChangeNotifier with TrayListener {
   // keycap animation type
   KeyCapAnimationType _keyCapAnimation = _Defaults.keyCapAnimation;
 
-  // mouse visualize clicks
-  bool _showMouseClicks = _Defaults.showMouseClicks;
-
-  // mouse visualize clicks
-  bool _highlightCursor = _Defaults.highlightCursor;
-
-  // show mouse events with keypress like, [Shift] + [Drag]
-  bool _showMouseEvents = _Defaults.showMouseEvents;
 
   Screen get _currentScreen => _screens[_screenIndex];
 
@@ -213,11 +186,6 @@ class KeyEventProvider extends ChangeNotifier with TrayListener {
   Duration get animationDuration => Duration(milliseconds: _animationSpeed);
   KeyCapAnimationType get keyCapAnimation => _keyCapAnimation;
   bool get noKeyCapAnimation => _keyCapAnimation == KeyCapAnimationType.none;
-  bool get showMouseClicks => _visualizeEvents ? _showMouseClicks : false;
-  bool get highlightCursor => _highlightCursor;
-  bool get showMouseEvents => _showMouseEvents;
-  Offset get cursorOffset => _cursorOffset;
-  bool get mouseButtonDown => _mouseButtonDown;
 
   bool get _ignoreHistory =>
       _historyMode == VisualizationHistoryMode.none || _styling;
@@ -264,21 +232,6 @@ class KeyEventProvider extends ChangeNotifier with TrayListener {
     notifyListeners();
   }
 
-  set showMouseClicks(bool value) {
-    _showMouseClicks = value;
-    notifyListeners();
-  }
-
-  set highlightCursor(bool value) {
-    _highlightCursor = value;
-    notifyListeners();
-  }
-
-  set showMouseEvents(bool value) {
-    _showMouseEvents = value;
-    notifyListeners();
-  }
-
   _toggleVisualizer() {
     _visualizeEvents = !_visualizeEvents;
     _setTrayIcon();
@@ -289,8 +242,8 @@ class KeyEventProvider extends ChangeNotifier with TrayListener {
   _init() async {
     // load data
     await _updateFromJson();
-    // register mouse event listener
-    _registerMouseListener();
+// register mouse event listener
+    // _registerMouseListener();
     // register keyboard event listener
     _registerKeyboardListener();
     // setup tray manager
@@ -299,212 +252,14 @@ class KeyEventProvider extends ChangeNotifier with TrayListener {
     await _setTrayContextMenu();
   }
 
-  _registerMouseListener() async {
-    _mouseListenerId = getListenerBackend()!.addMouseListener(_onMouseEvent);
+   
 
-    if (_mouseListenerId == null) {
-      _hasError = true;
-      notifyListeners();
-      debugPrint("couldn't register mouse listener");
-    } else {
-      debugPrint("registered mouse listener");
-    }
-  }
+  
 
-  _onMouseEvent(MouseEvent event) {
-    // visualizer toggle
-    if (!_visualizeEvents) return;
-    // process mouse event
-    event.x -= _currentScreen.frame.left;
-    if (!Platform.isMacOS) {
-      event.y -= _currentScreen.frame.top;
+   
 
-      event.x /= _currentScreen.scaleFactor;
-      event.y /= _currentScreen.scaleFactor;
-    } else {
-      event.y -= _macOSMouseOriginOffset.dy;
-    }
-    // mouse moved
-    if (event is MouseMoveEvent) {
-      _onMouseMove(event);
-    }
-    // mouse button clicked/released
-    else if (event is MouseButtonEvent) {
-      _onMouseButton(event);
-    }
-    // mouse wheel scrolled
-    else if (event is MouseWheelEvent) {
-      _onMouseWheel(event);
-    }
-  }
-
-  _onMouseMove(MouseMoveEvent event) {
-    bool notify = false;
-    _cursorOffset = event.offset;
-    // animate cursor position when cursor highlighted
-    if (_highlightCursor || _dragging) {
-      notify = true;
-    }
-
-    // drag threshold
-    final dragDistance = _firstCursorOffset == null
-        ? 0
-        : (_firstCursorOffset! - cursorOffset).distance.abs();
-
-    // drag started
-    if (dragDistance >= 64 && !_dragging) {
-      _dragging = true;
-
-      // show mouse events in key visualizer
-      if (_showMouseEvents) {
-        // remove left/right click event
-        _keyDown.removeWhere(
-          (_, event) =>
-              event.logicalKey.keyId == leftClickId ||
-              event.logicalKey.keyId == rightClickId,
-        );
-        _keyboardEvents[_groupId]?.removeWhere(
-          (_, value) =>
-              value.rawEvent.logicalKey.keyId == leftClickId ||
-              value.rawEvent.logicalKey.keyId == rightClickId,
-        );
-
-        // drag event pressed down
-        _onKeyDown(
-          const RawKeyDownEvent(data: RawKeyEventDataMouse.drag()),
-        );
-
-        notify = true;
-      }
-    }
-
-    if (notify) notifyListeners();
-  }
-
-  _onMouseButton(MouseButtonEvent event) {
-    final wasDragging = _dragging;
-    final leftOrRightDown = event.type == MouseButtonEventType.leftButtonDown ||
-        event.type == MouseButtonEventType.rightButtonDown;
-
-    if (_dragging && leftOrRightDown) {
-      _dragging = false;
-    }
-
-    // update offset
-    _cursorOffset = event.offset;
-
-    // mouse button down
-    if (leftOrRightDown) {
-      _mouseButtonDown = true;
-      _firstCursorOffset = event.offset;
-
-      if (_showMouseClicks) {
-        _mouseButtonDownTimestamp = DateTime.now().millisecondsSinceEpoch;
-        notifyListeners();
-      }
-    }
-    // mouse button up
-    else {
-      _firstCursorOffset = null;
-
-      if (_showMouseClicks) {
-        final diff = _mouseButtonDownTimestamp == null
-            ? 200
-            : DateTime.now().millisecondsSinceEpoch -
-                _mouseButtonDownTimestamp!;
-        _mouseButtonDownTimestamp = null;
-
-        // enforce minimum transition duration for smooth animation
-        if (diff < 200) {
-          Future.delayed(Duration(milliseconds: 200 - diff)).then(
-            (_) {
-              _mouseButtonDown = false;
-              notifyListeners();
-            },
-          );
-        } else {
-          _mouseButtonDown = false;
-          notifyListeners();
-        }
-      }
-      // set it right away
-      else {
-        _mouseButtonDown = false;
-      }
-    }
-
-    if (_showMouseEvents) {
-      switch (event.type) {
-        case MouseButtonEventType.leftButtonDown:
-          _onKeyDown(
-            const RawKeyDownEvent(data: RawKeyEventDataMouse.leftClick()),
-          );
-          break;
-
-        case MouseButtonEventType.leftButtonUp:
-          _onKeyUp(
-            RawKeyUpEvent(
-              data: wasDragging
-                  ? const RawKeyEventDataMouse.drag()
-                  : const RawKeyEventDataMouse.leftClick(),
-            ),
-          );
-          break;
-
-        case MouseButtonEventType.rightButtonDown:
-          _onKeyDown(
-            const RawKeyDownEvent(data: RawKeyEventDataMouse.rightClick()),
-          );
-          break;
-
-        case MouseButtonEventType.rightButtonUp:
-          _onKeyUp(
-            RawKeyUpEvent(
-              data: wasDragging
-                  ? const RawKeyEventDataMouse.drag()
-                  : const RawKeyEventDataMouse.rightClick(),
-            ),
-          );
-          break;
-      }
-    }
-  }
-
-  // mouse wheel delta
-  int _wheelDelta = 0;
-
-  _onMouseWheel(MouseWheelEvent event) {
-    // scroll started
-    if (_wheelDelta == 0) {
-      // dispatch scroll event
-      _onKeyDown(
-        const RawKeyDownEvent(data: RawKeyEventDataMouse.scroll()),
-      );
-    }
-    _wheelDelta += event.wheelDelta;
-
-    _isScrollStopped(_wheelDelta);
-  }
-
-  _isScrollStopped(int delta) async {
-    await Future.delayed(const Duration(milliseconds: 1200));
-    // scroll stopped
-    if (delta == _wheelDelta) {
-      // dispatch key up event
-      _onKeyUp(
-        const RawKeyUpEvent(data: RawKeyEventDataMouse.scroll()),
-      );
-      // reset wheel delta
-      _wheelDelta = 0;
-    }
-  }
-
-  _removeMouseListener() {
-    if (_mouseListenerId != null) {
-      getListenerBackend()!.removeKeyboardListener(_mouseListenerId!);
-    }
-  }
-
+   
+ 
   _registerKeyboardListener() async {
     _keyboardListenerId =
         getListenerBackend()!.addKeyboardListener(_onRawKeyEvent);
@@ -524,7 +279,9 @@ class KeyEventProvider extends ChangeNotifier with TrayListener {
       // check for shortcut pressed
       _unfilteredEvents.add(event.keyId);
       if (listEquals(_unfilteredEvents, keyvizToggleShortcut)) {
-        _toggleVisualizer();
+        print("cuts");
+        // _toggleVisualizer();
+        _onChange();
       }
 
       if (_visualizeEvents) _onKeyDown(event);
@@ -537,6 +294,20 @@ class KeyEventProvider extends ChangeNotifier with TrayListener {
     }
   }
 
+  _onChange() {
+   
+
+   
+    // _keyDown[LogicalKeyboardKey.metaLeft.keyId] = event;
+
+    // _keyboardEvents[_groupId]![event.keyId] = KeyEventData(
+    //   event,
+    //   show: noKeyCapAnimation,
+    // );
+  }
+
+
+
   _onKeyDown(RawKeyDownEvent event) {
     // filter hotkey
     if (_filterHotkeys && !_eventIsHotkey(event)) //return;
@@ -545,15 +316,6 @@ class KeyEventProvider extends ChangeNotifier with TrayListener {
       return;
     }
 
-    // filter unknown key
-    if (event.logicalKey.keyLabel == "") {
-      // fake mouse event
-      if (event.data is! RawKeyEventDataMouse) {
-        // TODO: handle unknown key
-        debugPrint("⬇️ ignoring [${event.label}]");
-        return;
-      }
-    }
 
     // check if key pressed again while in view
     // ignoring history and current display events has key id
@@ -715,6 +477,7 @@ class KeyEventProvider extends ChangeNotifier with TrayListener {
     // wait for background bar to expand
     await Future.delayed(animationDuration);
     // set show to true
+
     final event = _keyboardEvents[groupId]?[keyId];
     if (event != null) {
       _keyboardEvents[groupId]![keyId] = event.copyWith(show: true);
@@ -777,7 +540,7 @@ class KeyEventProvider extends ChangeNotifier with TrayListener {
   bool _eventIsHotkey(RawKeyDownEvent event) {
     if (_keyDown.isEmpty) {
       // event should be a modifier and not ignored
-      return !event.isMouse &&
+      return 
               (!_ignoreKeys[ModifierKey.control]! && event.isControl) ||
           (!_ignoreKeys[ModifierKey.meta]! && event.isMeta) ||
           (!_ignoreKeys[ModifierKey.alt]! && event.isAlt) ||
@@ -833,7 +596,7 @@ class KeyEventProvider extends ChangeNotifier with TrayListener {
     );
   }
 
-  @override
+@override
   void onTrayIconMouseDown() {
     super.onTrayIconMouseDown();
     _toggleVisualizer();
@@ -881,9 +644,7 @@ class KeyEventProvider extends ChangeNotifier with TrayListener {
         _JsonKeys.lingerDurationInSeconds: _lingerDurationInSeconds,
         _JsonKeys.animationSpeed: _animationSpeed,
         _JsonKeys.keyCapAnimation: _keyCapAnimation.name,
-        _JsonKeys.showMouseClicks: _showMouseClicks,
-        _JsonKeys.highlightCursor: _highlightCursor,
-        _JsonKeys.showMouseEvents: _showMouseEvents,
+        // _JsonKeys.highlightCursor: _highlightCursor,
       };
 
   _updateFromJson() async {
@@ -948,14 +709,7 @@ class KeyEventProvider extends ChangeNotifier with TrayListener {
         break;
     }
 
-    _showMouseClicks =
-        data[_JsonKeys.showMouseClicks] ?? _Defaults.showMouseClicks;
-
-    _highlightCursor =
-        data[_JsonKeys.highlightCursor] ?? _Defaults.highlightCursor;
-
-    _showMouseEvents =
-        data[_JsonKeys.showMouseEvents] ?? _Defaults.showMouseEvents;
+ 
   }
 
   _setDisplay(List? frame) async {
@@ -970,22 +724,13 @@ class KeyEventProvider extends ChangeNotifier with TrayListener {
       if (index != -1) _screenIndex = index;
     }
 
-    if (Platform.isMacOS) {
-      _macOSMouseOriginOffset =
-          _screens[0].frame.bottomLeft - _currentScreen.frame.bottomLeft;
-    }
-
+ 
     setWindowFrame(_currentScreen.frame);
 
     windowManager.show();
   }
 
   _changeDisplay() async {
-    if (Platform.isMacOS) {
-      _macOSMouseOriginOffset =
-          _screens[0].frame.bottomLeft - _currentScreen.frame.bottomLeft;
-      setWindowFrame(_currentScreen.frame);
-    } else {
       await windowManager.setFullScreen(false);
       await windowManager.hide();
 
@@ -994,7 +739,7 @@ class KeyEventProvider extends ChangeNotifier with TrayListener {
       await Future.delayed(Durations.extralong2);
       await windowManager.setFullScreen(true);
       await windowManager.show();
-    }
+    
     notifyListeners();
   }
 
@@ -1008,16 +753,13 @@ class KeyEventProvider extends ChangeNotifier with TrayListener {
     _lingerDurationInSeconds = _Defaults.lingerDurationInSeconds;
     _animationSpeed = _Defaults.animationSpeed;
     _keyCapAnimation = _Defaults.keyCapAnimation;
-    _showMouseClicks = _Defaults.showMouseClicks;
-    _highlightCursor = _Defaults.highlightCursor;
-    _showMouseEvents = _Defaults.showMouseEvents;
-
+   
     notifyListeners();
   }
 
   @override
   void dispose() {
-    _removeMouseListener();
+ 
     _removeKeyboardListener();
     trayManager.removeListener(this);
     super.dispose();
@@ -1033,9 +775,7 @@ class _JsonKeys {
   static const lingerDurationInSeconds = "linger_duration";
   static const animationSpeed = "animation_speed";
   static const keyCapAnimation = "keycap_animation";
-  static const showMouseClicks = "show_clicks";
-  static const highlightCursor = "highlight_cursor";
-  static const showMouseEvents = "show_mouse_events";
+ 
 }
 
 class _Defaults {
@@ -1051,7 +791,5 @@ class _Defaults {
   static const lingerDurationInSeconds = 4;
   static const animationSpeed = 500;
   static const keyCapAnimation = KeyCapAnimationType.none;
-  static const showMouseClicks = true;
-  static const highlightCursor = false;
-  static const showMouseEvents = true;
+ 
 }

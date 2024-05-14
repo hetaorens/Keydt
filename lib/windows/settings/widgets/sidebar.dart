@@ -5,10 +5,10 @@ import 'package:keyviz/windows/shared/shared.dart';
 
 enum SettingsTab {
   general(VuesaxIcons.cogWheel),
-  mouse(VuesaxIcons.mouse),
+  // mouse(VuesaxIcons.mouse),
   keycap(VuesaxIcons.keyboard),
-  appearance(VuesaxIcons.monitor),
-  about(VuesaxIcons.more);
+  appearance(VuesaxIcons.monitor);
+
 
   const SettingsTab(this.icon);
   final String icon;

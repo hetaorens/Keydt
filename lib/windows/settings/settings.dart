@@ -31,7 +31,7 @@ class _SettingsWindow extends StatefulWidget {
 }
 
 class _SettingsWindowState extends State<_SettingsWindow> {
-  SettingsTab _currentTab = SettingsTab.about;
+  SettingsTab _currentTab = SettingsTab.keycap;
   late final _positionNotifier = ValueNotifier<Offset>(const Offset(340, 260));
 
   @override
@@ -91,8 +91,7 @@ class _SettingsWindowState extends State<_SettingsWindow> {
       case SettingsTab.general:
         return const GeneralTabView();
 
-      case SettingsTab.mouse:
-        return const MouseTabView();
+
 
       case SettingsTab.keycap:
         return const StyleTabView();
@@ -100,8 +99,6 @@ class _SettingsWindowState extends State<_SettingsWindow> {
       case SettingsTab.appearance:
         return const AppearanceTabView();
 
-      case SettingsTab.about:
-        return const AboutView();
     }
   }
 

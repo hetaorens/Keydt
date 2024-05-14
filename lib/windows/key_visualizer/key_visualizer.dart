@@ -55,7 +55,7 @@ class _KeyVisualizer extends StatelessWidget {
   Widget build(BuildContext context) {
     // visualization history mode
     final historyDirection = context.select<KeyEventProvider, Axis?>(
-      (keyEvent) => keyEvent.historyDirection,
+      (keyEvent) => keyEvent.historyDirection,  
     );
     return Selector<KeyEventProvider, List<String>>(
       builder: (context, groups, _) {

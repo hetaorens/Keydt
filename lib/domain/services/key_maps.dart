@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 
 import 'package:keyviz/config/assets.dart';
-import 'package:keyviz/domain/services/raw_keyboard_mouse.dart';
 
 // utility class to encapsulate key data
 class KeyMapData {
@@ -350,24 +349,24 @@ final keymaps = <int, KeyMapData>{
     label: "9",
     symbol: "pg up",
   ),
-  leftClickId: const KeyMapData(
-    label: "left click",
-    icon: KeyIcons.leftClick,
-  ),
-  rightClickId: const KeyMapData(
-    label: "right click",
-    // shortLabel: "click",
-    icon: KeyIcons.rightClick,
-  ),
-  dragId: const KeyMapData(
-    label: "drag",
-    icon: KeyIcons.drag,
-  ),
-  scrollId: const KeyMapData(
-    label: "scroll",
-    glyph: "↕",
-    icon: KeyIcons.scroll,
-  ),
+  // leftClickId: const KeyMapData(
+  //   label: "left click",
+  //   icon: KeyIcons.leftClick,
+  // ),
+  // rightClickId: const KeyMapData(
+  //   label: "right click",
+  //   // shortLabel: "click",
+  //   icon: KeyIcons.rightClick,
+  // ),
+  // dragId: const KeyMapData(
+  //   label: "drag",
+  //   icon: KeyIcons.drag,
+  // ),
+  // scrollId: const KeyMapData(
+  //   label: "scroll",
+  //   glyph: "↕",
+  //   icon: KeyIcons.scroll,
+  // ),
 };
 
 T switchPlatform<T>({

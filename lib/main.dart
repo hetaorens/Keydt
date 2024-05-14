@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 
 import 'package:flutter_acrylic/flutter_acrylic.dart';
 import 'package:hid_listener/hid_listener.dart';
-import 'package:macos_window_utils/macos_window_utils.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'app.dart';
@@ -17,11 +16,8 @@ void main() async {
 
   if (getListenerBackend() != null) {
     if (!getListenerBackend()!.initialize()) {
-      print("Failed to initialize listener backend");
     }
-  } else {
-    print("No listener backend for this platform");
-  }
+  } 
 
   runApp(const KeyvizApp());
 
@@ -43,14 +39,11 @@ _initWindow() async {
     },
   );
 
-  if (Platform.isMacOS) {
-    WindowManipulator.makeWindowFullyTransparent();
-    await WindowManipulator.zoomWindow();
-  } else {
+ 
     Window.setEffect(
       effect: WindowEffect.transparent,
       color: Colors.transparent,
     );
-  }
+ 
   windowManager.blur();
 }

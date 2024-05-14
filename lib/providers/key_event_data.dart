@@ -4,13 +4,10 @@ import 'package:keyviz/domain/services/services.dart';
 
 extension Ease on RawKeyEvent {
   int get keyId => logicalKey.keyId;
-  bool get isMouse => data is RawKeyEventDataMouse;
   String get label {
-    if (isMouse) {
-      return data.keyLabel;
-    } else {
+
       return logicalKey.keyLabel;
-    }
+    
   }
 
   bool get isModifier => _modifiers.contains(logicalKey);
